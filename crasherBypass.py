@@ -1452,8 +1452,6 @@ if os.name == 'nt':
                     Logger.info('Internet connection not found, retrying in 10 seconds')
                     time.sleep(10)
             except Exception as e:
-                if isinstance(e, KeyboardInterrupt):
-                    os._exit(1)
                 Logger.critical(e, exc_info=True)
                 Logger.info('There was an error, retrying after 10 minutes')
                 time.sleep(600)
